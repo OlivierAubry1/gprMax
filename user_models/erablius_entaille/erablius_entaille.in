@@ -1,0 +1,43 @@
+#title: ErabliUS_Complex_Hardwood_Entaille
+#domain: 0.600 0.600 0.004
+#dx_dy_dz: 0.004 0.004 0.004
+#time_window: 18e-9
+
+#material: 6.0 1.0 1.0 0.0 cambium
+#add_dispersion_debye: 1 18.0 9.23e-12 cambium
+#material: 6.1 0.033 1.0 0.0 outer_sapwood
+#add_dispersion_debye: 1 12.36 9.23e-12 outer_sapwood
+#material: 5.9 0.02 1.0 0.0 inner_sapwood
+#add_dispersion_debye: 1 9.66 9.23e-12 inner_sapwood
+#material: 5.4 0.0083 1.0 0.0 rings
+#add_dispersion_debye: 1 3.1 9.23e-12 rings
+#material: 5.22 0.005 1.0 0.0 heartwood
+#add_dispersion_debye: 1 1.43 9.23e-12 heartwood
+#material: 5.0 0.0 1.0 0.0 bark
+#material: 1.0 0.0 1.0 0.0 air
+
+#python:
+import math
+n_scans = 18
+center = (0.3, 0.3)
+r_bark = 0.210
+
+print(f"#cylinder: {center[0]} {center[1]} 0.0 {center[0]} {center[1]} 0.004 {r_bark} bark")
+print(f"#cylinder: {center[0]} {center[1]} 0.0 {center[0]} {center[1]} 0.004 {r_bark-0.008} cambium")
+print(f"#cylinder: {center[0]} {center[1]} 0.0 {center[0]} {center[1]} 0.004 {r_bark-0.015} outer_sapwood")
+print(f"#cylinder: {center[0]} {center[1]} 0.0 {center[0]} {center[1]} 0.004 {r_bark-0.035} inner_sapwood")
+print(f"#cylinder: {center[0]} {center[1]} 0.0 {center[0]} {center[1]} 0.004 {r_bark-0.080} rings")
+print(f"#cylinder: {center[0]} {center[1]} 0.0 {center[0]} {center[1]} 0.004 {r_bark-0.130} heartwood")
+
+print(f"#box: 0.420 0.290 0.000 0.500 0.310 0.004 air")
+
+curr_a = (current_model_run - 1) * (2 * math.pi / n_scans)
+r_ant = r_bark + 0.012
+ax = center[0] + r_ant * math.cos(curr_a)
+ay = center[1] + r_ant * math.sin(curr_a)
+print(f"#hertzian_dipole: z {ax:.4f} {ay:.4f} 0.002 my_pulse")
+print(f"#rx: {ax:.4f} {ay:.4f} 0.002")
+#end_python:
+
+#waveform: ricker 1.0 1.5e9 my_pulse
+#geometry_view: 0 0 0 0.600 0.600 0.004 0.004 0.004 0.004 erablius_entaille_geom n
