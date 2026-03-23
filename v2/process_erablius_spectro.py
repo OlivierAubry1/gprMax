@@ -7,7 +7,7 @@ import os
 
 def main():
 
-    filename1 = "EECYL_x06_moyen.out"
+    filename1 = "entaille_cylindre.out"
 
     sweep_path = "4a8GHz_25ns_5.txt"
 

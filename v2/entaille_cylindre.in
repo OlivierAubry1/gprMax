@@ -1,0 +1,62 @@
+#title: ErabliUS_Complex_Hardwood_Entaille
+#domain: 0.600 0.600 0.002
+#dx_dy_dz: 0.002 0.002 0.002
+#time_window: 1.25e-7
+
+#material: 6.0 1.0 1.0 0.0 cambium
+#add_dispersion_debye: 1 18.0 9.23e-12 cambium
+#material: 6.1 0.033 1.0 0.0 outer_sapwood
+#add_dispersion_debye: 1 12.36 9.23e-12 outer_sapwood
+#material: 5.9 0.02 1.0 0.0 inner_sapwood
+#add_dispersion_debye: 1 9.66 9.23e-12 inner_sapwood
+#material: 5.4 0.0083 1.0 0.0 rings
+#add_dispersion_debye: 1 3.1 9.23e-12 rings
+#material: 5.22 0.005 1.0 0.0 heartwood
+#add_dispersion_debye: 1 1.43 9.23e-12 heartwood
+#material: 5.0 0.0 1.0 0.0 bark
+#material: 1.0 0.0 1.0 0.0 air
+
+#excitation_file: 4a8GHz_25ns_5.txt
+
+#python:
+import math
+
+center_x = 0.3
+center_y = 0.3
+z_length = 0.002
+
+layers = [
+    (0.120, 'bark'),
+    (0.115, 'cambium'),
+    (0.105, 'outer_sapwood'),
+    (0.080, 'inner_sapwood'),
+    (0.060, 'rings'),
+    (0.030, 'heartwood')
+]
+
+for r, mat in layers:
+    print(f"#cylinder: {center_x} {center_y} 0.0 {center_x} {center_y} {z_length} {r} {mat}")
+
+profondeur_trou = 0.0508
+rayon_trou = 0.004
+x_debut = center_x + layers[0][0] - profondeur_trou
+x_fin = center_x + layers[0][0]
+
+print(f"#box: {x_debut} {center_y - rayon_trou} 0.0 {x_fin} {center_y + rayon_trou} {z_length} air")
+
+n_scans = 60
+angle_start = -math.pi / 4
+angle_end = math.pi / 4
+
+curr_a = angle_start + (current_model_run - 1) * (angle_end - angle_start) / max(1, n_scans - 1)
+
+r_ant = layers[0][0] + 0.015
+ax = center_x + r_ant * math.cos(curr_a)
+ay = center_y + r_ant * math.sin(curr_a)
+az = 0.001
+
+print(f"#hertzian_dipole: z {ax:.4f} {ay:.4f} {az:.4f} my_pulse")
+print(f"#rx: {ax:.4f} {ay:.4f} {az:.4f}")
+#end_python:
+
+#geometry_view: 0 0 0 0.600 0.600 0.002 0.002 0.002 0.002 EECYL_x06_antenne n
