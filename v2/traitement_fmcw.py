@@ -83,8 +83,8 @@ def process_and_get_fft(filename, y_txt, B, Tc, cst_diele):
 
 def main():
     parser = argparse.ArgumentParser(description='Post-traitement radar FMCW gprMax')
-    parser.add_argument('--file1', type=str, default='EERECT_x06_antenne.out', help='Fichier de référence')
-    parser.add_argument('--file2', type=str, default='EERECT_couches_x06_antenne.out', help='Fichier avec cible')
+    parser.add_argument('--file1', type=str, default='legacy\EECYL_x06_antenne.out', help='Fichier de référence')
+    parser.add_argument('--file2', type=str, default='legacy\ESCYL_x06_antenne.out', help='Fichier avec cible')
     parser.add_argument('--sweep', type=str, default='4a8GHz_25ns_5.txt', help='Fichier TXT du chirp')
     args = parser.parse_args()
 
