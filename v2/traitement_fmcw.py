@@ -1,14 +1,28 @@
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks, butter, filtfilt
 import argparse
 import os
 
+def lowpass_filter(data, cutoff, fs, order=5):
+    """
+    Applique un filtre passe-bas numérique de type Butterworth.
+    - data : le signal à filtrer
+    - cutoff : la fréquence de coupure (en Hz)
+    - fs : la fréquence d'échantillonnage (en Hz)
+    - order : l'ordre du filtre (plus il est élevé, plus la coupure est raide)
+    """
+    nyq = 0.5 * fs  # Fréquence de Nyquist
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    y = filtfilt(b, a, data) # filtfilt évite le déphasage du signal
+    return y
+
 def process_and_get_fft(filename, y_txt, B, Tc, cst_diele):
     """
-    Lit un fichier .out de gprMax, effectue le mélange avec le signal TX,
-    calcule la FFT et détecte les pics pour trouver la distance.
+    Lit un fichier .out, effectue le mélange, applique un filtre passe-bas,
+    calcule la FFT et détecte les distances.
     """
     if not os.path.exists(filename):
         print(f"Erreur : Le fichier '{filename}' est introuvable.")
@@ -26,31 +40,35 @@ def process_and_get_fft(filename, y_txt, B, Tc, cst_diele):
 
         dt_trace = f.attrs.get('dt', 1.0)
     
-    # Pour simplifier, on traite uniquement la première trace (A-Scan)
     single_trace = trace[0]
     N_trace = len(single_trace)
     
-    # 1. INTERPOLATION : On adapte parfaitement la taille du TXT à la trace gprMax
+    # 1. INTERPOLATION
     y_interp = np.interp(np.linspace(0, len(y_txt) - 1, N_trace),
                          np.arange(len(y_txt)),
                          y_txt)
 
-    # 2. MULTIPLICATION (Mélange / Mixing FMCW)
-    result = single_trace * y_interp
+    # 2. MULTIPLICATION (Mélange / Mixing)
+    result_brut = single_trace * y_interp
 
-    # 3. FFT (Analyse Spectrale)
+    # 3. FILTRAGE PASSE-BAS
+    fs = 1.0 / dt_trace  # Fréquence d'échantillonnage du signal gprMax
+    cutoff_freq = 2e9    # Fréquence de coupure à 2 GHz (2 milliards de Hz)
+    
+    result_filtre = lowpass_filter(result_brut, cutoff_freq, fs)
+
+    # 4. FFT (Analyse Spectrale sur le signal filtré)
     hanning = np.hanning(N_trace)
-    fft_values = np.fft.fft(result * hanning)
+    fft_values = np.fft.fft(result_filtre * hanning)
     freqs = np.fft.fftfreq(N_trace, dt_trace)
     
-    # On ne garde que les fréquences positives
     positive_freqs = freqs[:N_trace//2]
     positive_fft = np.abs(fft_values[:N_trace//2])
 
-    # 4. DÉTECTION DES PICS ET CALCUL DE DISTANCE
+    # 5. DÉTECTION DES PICS
     c = 3e8
-    # On cherche les pics qui dépassent 10% de l'amplitude max
-    peaks, _ = find_peaks(positive_fft, height=np.max(positive_fft) * 0.10)
+    # On abaisse un peu le seuil à 5% car le filtre a lissé le signal global
+    peaks, _ = find_peaks(positive_fft, height=np.max(positive_fft) * 0.05)
     fb_list = positive_freqs[peaks]
 
     print(f"\n--- Analyse de {filename} ---")
@@ -58,53 +76,44 @@ def process_and_get_fft(filename, y_txt, B, Tc, cst_diele):
         print("Aucun pic significatif détecté.")
     else:
         for i, fb in enumerate(fb_list):
-            # Formule de la distance FMCW
             R = (fb * c * Tc) / (2 * B * np.sqrt(cst_diele))
             print(f"Pic {i+1}: Fréquence fb = {fb:.2e} Hz --> Distance = {R:.3f} m")
 
     return positive_freqs, positive_fft
 
 def main():
-    # Configuration des arguments du terminal
     parser = argparse.ArgumentParser(description='Post-traitement radar FMCW gprMax')
     parser.add_argument('--file1', type=str, default='EERECT_x06_antenne.out', help='Fichier de référence')
     parser.add_argument('--file2', type=str, default='EERECT_couches_x06_antenne.out', help='Fichier avec cible')
     parser.add_argument('--sweep', type=str, default='4a8GHz_25ns_5.txt', help='Fichier TXT du chirp')
     args = parser.parse_args()
 
-    # Paramètres FMCW (à vérifier selon ton modèle exact)
-    B = 4e9            # Bande passante de 4 à 8 GHz (4 GHz)
-    Tc = 2.5e-8        # Durée du chirp (25 ns)
-    cst_diele = 6      # Constante diélectrique (ajuster si l'onde voyage dans l'air = 1)
+    B = 4e9            
+    Tc = 2.5e-8        
+    cst_diele = 6      
 
     if not os.path.exists(args.sweep):
-        print(f"Erreur fatale : Le fichier chirp '{args.sweep}' est introuvable.")
+        print(f"Erreur : Le fichier chirp '{args.sweep}' est introuvable.")
         return
 
-    # Lecture du chirp d'émission
     txt_data = np.loadtxt(args.sweep, skiprows=1)
-    # On prend toute la colonne de données, l'interpolation gérera la taille
     y_txt = txt_data[:, 1] 
 
-    # --- Lancement de l'analyse et affichage ---
     plt.figure(figsize=(10, 5))
 
-    # Traitement fichier 1
     freqs1, fft1 = process_and_get_fft(args.file1, y_txt, B, Tc, cst_diele)
     if freqs1 is not None:
         plt.plot(freqs1, fft1, label=args.file1, color='blue')
 
-    # Traitement fichier 2
     freqs2, fft2 = process_and_get_fft(args.file2, y_txt, B, Tc, cst_diele)
     if freqs2 is not None:
         plt.plot(freqs2, fft2, label=args.file2, color='orange', linestyle='--')
 
     plt.xlabel("Fréquence de battement (Hz)")
     plt.ylabel("Amplitude")
-    plt.title("Spectres de battement FMCW")
+    plt.title("Spectres de battement FMCW (Filtré)")
     
-    # Astuce : On limite l'axe X pour mieux voir les pics de basse fréquence
-    # Si tes pics sont coupés, augmente cette valeur (ex: 5e9)
+    # On limite l'axe X à 2 GHz puisque tout ce qui est au-dessus a été coupé
     plt.xlim(0, 2e9) 
     
     plt.grid(True)
