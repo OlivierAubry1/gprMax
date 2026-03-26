@@ -56,12 +56,17 @@ def main():
         result = single_trace * y_txt
 
 
+
+
         # création et affichage du spectrogram
-        f, t, Sxx = spectrogram(result,9.99e10, nperseg =1024)
+        f, t, Sxx = spectrogram(result,9.99e10, nperseg=1024)
+
+        plt.imshow(np.log(np.abs(Sxx)), aspect='auto', origin='lower')
+
        
         plt.figure(figsize=(10, 4))
-        plt.ylim(0,0.75e9)
-        plt.pcolormesh(t, f, Sxx, shading='gouraud')
+        #plt.ylim(0,0.75e9)
+        plt.pcolormesh((t, f, Sxx), shading='gouraud')
         plt.ylabel('Frequency [Hz]')
         plt.xlabel('Time [sec]')
         plt.show()
