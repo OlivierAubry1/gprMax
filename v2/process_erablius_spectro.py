@@ -7,7 +7,8 @@ import os
 
 def main():
 
-    filename1 = "oli\erablius_entaille_simple_2cm.out"
+    #filename1 = "oli\erablius_entaille_simple_2cm.out"
+    filename1 = "oli\erablius_sain_simple.out"
 
     sweep_path = "4a8GHz_25ns_5.txt"
 
@@ -66,7 +67,7 @@ def main():
        
         plt.figure(figsize=(10, 4))
         #plt.ylim(0,0.75e9)
-        plt.pcolormesh((t, f, Sxx), shading='gouraud')
+        plt.pcolormesh(t, f, Sxx, shading='gouraud')
         plt.ylabel('Frequency [Hz]')
         plt.xlabel('Time [sec]')
         plt.show()
